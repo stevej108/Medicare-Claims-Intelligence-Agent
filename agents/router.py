@@ -8,6 +8,7 @@ import re
 from core.models import (
     ToolName,
     ToolRoute,
+    SegmentName,
     normalize_segment_text,
     resolve_segment_name
 )
