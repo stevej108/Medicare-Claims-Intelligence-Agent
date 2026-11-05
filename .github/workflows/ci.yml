@@ -48,4 +48,30 @@ jobs:
         context: .
         file: ./Dockerfile
         push: false
-        tags: medicare-claims-api:ci        
+        load: true
+        tags: medicare-claims-api:ci     
+        
+    - name: Start Docker container
+      run: |
+          docker run -d \
+            --name medicare-claims-api \
+            -p 8000:8000 \
+            medicare-claims-api:ci
+
+    - name: Wait for the API to be ready
+      run: |
+          for i in {1..30}; do
+            if curl --fail http://localhost:8000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs medicare-claims-api
+          exit 1
+
+    - name: Stop Docker container
+      if: always()
+      run: |
+        docker rm -f medicare-claims-api || true      
+    
