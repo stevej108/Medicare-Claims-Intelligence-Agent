@@ -6,6 +6,8 @@ from core.models import (
     ToolRoute,
 )
 
+pytestmark = pytest.mark.data
+
 
 def test_dispatch_population_summary():
     route = ToolRoute(
