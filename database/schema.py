@@ -4,10 +4,6 @@ import duckdb
 ANALYTICAL_VIEW = "analytical_member_year"
 
 
-import duckdb
-
-
-ANALYTICAL_VIEW = "analytical_member_year"
 
 
 def register_analytical_views(

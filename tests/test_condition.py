@@ -1,5 +1,5 @@
 import pytest
-from pydantic import ValidationError
+
 
 
 
@@ -9,7 +9,7 @@ from tools.conditions import (
 
 from core.models import SegmentName
 
-
+@pytest.mark.data
 def test_condition_prevalence():
     result = get_condition_prevalence(
         SegmentName.PERSISTENT_COMPLEX
