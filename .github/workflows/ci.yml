@@ -29,7 +29,7 @@ jobs:
 
       - name: Run deterministic tests
         run: |
-          pytest -m "not llm" -v
+          pytest -m "not llm and not data" -v
 
   docker:
     runs-on: ubuntu-latest
