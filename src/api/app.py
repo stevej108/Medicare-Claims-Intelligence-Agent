@@ -1,7 +1,12 @@
+import logging
+
 from fastapi import FastAPI, HTTPException
 
-from src.api.schemas import QueryRequest, QueryResponse
 from agents.run import run_claims_agent
+from src.api.schemas import QueryRequest, QueryResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(
@@ -28,6 +33,10 @@ def query_agent(request: QueryRequest):
         )
 
     except Exception as exc:
+        logger.exception(
+            "Claims agent failed to process request."
+        )
+
         raise HTTPException(
             status_code=500,
             detail="Claims agent failed to process the request.",
