@@ -27,7 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-      - name: Run deterministic tests
+      - name: Run portable test suite
         run: |
           pytest -m "not llm and not data" -v
 

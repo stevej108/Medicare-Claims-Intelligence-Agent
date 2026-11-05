@@ -2,6 +2,7 @@ import pytest
 
 from tools.population import get_population_summary
 
+pytestmark = pytest.mark.data
 
 def test_population_summary():
     result = get_population_summary()

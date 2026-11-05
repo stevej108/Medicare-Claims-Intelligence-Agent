@@ -5,6 +5,7 @@ from _pytest.python import CallSpec2
 from core.models import SegmentName
 from tools.segments import get_segment_profile, compare_segments
 
+pytestmark = pytest.mark.data
 
 
 def test_persistent_complex_profile():

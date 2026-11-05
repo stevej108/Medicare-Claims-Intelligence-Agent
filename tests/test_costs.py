@@ -1,6 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
+
+
 from tools.costs import (
     get_cost_concentration,
 )
@@ -15,6 +17,7 @@ from tools.costs import (
         (0.20, 66.153313),
     ],
 )
+@pytest.mark.data
 def test_cost_concentration(
     fraction,
     expected_share,
@@ -43,6 +46,7 @@ def test_cost_concentration(
         1.01,
     ],
 )
+@pytest.mark.data
 def test_invalid_cost_fraction(
     invalid_fraction,
 ):
