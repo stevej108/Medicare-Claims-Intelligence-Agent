@@ -56,6 +56,9 @@ Thumbs.db
 # by the upstream CMS analytics project.
 data/processed/*.parquet
 
+!data/processed/member_year.parquet
+!data/processed/high_cost_persistence.parquet
+
 # Keep directory structure if needed.
 !data/processed/.gitkeep
 
