@@ -2,105 +2,211 @@
 
 ## Overview
 
-The Medicare Claims Intelligence Agent is a locally hosted agentic AI application for exploring synthetic Medicare claims analytics using natural-language questions.
+The **Medicare Claims Intelligence Agent** is an end-to-end AI engineering project for exploring synthetic Medicare claims analytics through natural-language questions.
 
-The project combines:
+The system combines deterministic healthcare analytics with agentic AI while deliberately separating **numerical computation from language-model reasoning**.
 
-- validated CMS DE-SynPUF analytical data
-- DuckDB for deterministic claims analytics
-- Qwen3:8B running locally through Ollama
-- retrieval-augmented generation (RAG)
-- FAISS semantic search
-- Sentence Transformers embeddings
-- LangGraph orchestration
-- Pydantic validation
-- Streamlit
-- automated unit and routing tests
+> **LLMs reason. Deterministic tools calculate. RAG grounds methodology. LangGraph orchestrates evidence.**
 
-The core design principle is simple:
+Rather than allowing an LLM to generate arbitrary SQL or calculate healthcare metrics directly, the agent routes analytical questions to a controlled set of validated DuckDB-backed tools operating on a canonical Medicare beneficiary-year semantic layer.
 
-**The language model reasons about the question. Deterministic analytical tools calculate the answer.**
+The project has evolved beyond the analytical agent itself into a deployable AI service demonstrating:
 
-Rather than allowing an LLM to generate arbitrary SQL or Python, the agent routes analytical questions to a controlled set of tested tools built on top of a validated Medicare beneficiary-year semantic layer.
+- FastAPI API development
+- Pydantic request and response contracts
+- Docker containerization
+- provider-independent LLM configuration
+- local and hosted LLM inference
+- resource-aware model loading
+- mocked API testing
+- deterministic, data-integration, and LLM-integration test layers
+- automated GitHub Actions CI
+- CI-gated continuous deployment
+- cloud deployment on Render
+- environment-based configuration and secrets management
 
-Documentation, methodology, cohort definitions, and limitations are handled separately through retrieval-augmented generation.
+The deployed API uses **Groq-hosted Qwen inference**, while local development can continue using **Qwen through Ollama**.
 
-This separation allows the system to distinguish between questions such as:
+---
 
-> **What percentage of beneficiary-years had inpatient utilization?**
+## Live Application
 
-and:
+The deployed FastAPI service is available at:
 
-> **How is total annual cost defined?**
+**https://medicare-claims-intelligence-agent.onrender.com**
 
-The first requires structured analytical computation.
+Interactive API documentation:
 
-The second requires methodological knowledge retrieval.
+**https://medicare-claims-intelligence-agent.onrender.com/docs**
 
-Hybrid questions can use both.
+Health endpoint:
+
+**https://medicare-claims-intelligence-agent.onrender.com/health**
+
+The deployment runs as a Dockerized FastAPI service on Render. Successful commits to `main` must pass the GitHub Actions CI pipeline before the deployment workflow is allowed to trigger Render.
 
 ---
 
 ## Project Motivation
 
-This project builds on the analytical foundation developed in the companion repository:
+This project builds on the analytical foundation developed in the companion **CMS Medicare Utilization Analytics** project.
 
-**CMS Medicare Utilization Analytics**
-
-That project transformed CMS DE-SynPUF claims into a validated longitudinal beneficiary-year analytical layer and explored:
+That work transforms CMS DE-SynPUF claims into a validated longitudinal beneficiary-year analytical layer covering:
 
 - healthcare utilization
+- annual healthcare costs
 - cost concentration
 - chronic-condition burden
 - longitudinal high-cost persistence
 - payer-oriented member segmentation
 
-The Claims Intelligence Agent uses those validated analytical outputs as its semantic data foundation.
+The Claims Intelligence Agent asks a different question:
 
-The objective of this second project is different:
+> **How can AI make trusted healthcare analytics accessible through natural language without allowing the language model to become the source of truth for numerical calculations?**
 
-> **How can agentic AI make trusted healthcare analytics accessible through natural language without allowing the language model to become the source of truth for numerical calculations?**
+The result is a hybrid architecture where:
+
+- DuckDB owns calculations
+- controlled Python tools own analytical capabilities
+- RAG owns methodological knowledge
+- LLMs interpret and synthesize
+- LangGraph coordinates the workflow
+- FastAPI exposes the application as a service
 
 ---
 
-## Architecture
+## System Architecture
 
 ```text
-                         User Question
-                              │
-                              ▼
-                     LangGraph Planner
-                              │
-              ┌───────────────┼───────────────┐
-              │               │               │
-              ▼               ▼               ▼
-          Analytics        Knowledge        Hybrid
-              │               │               │
-              ▼               ▼          ┌────┴────┐
-         Qwen Router         FAISS        ▼         ▼
-              │               │        Analytics   RAG
-              ▼               │           │         │
-       Canonical ToolRoute    │           ▼         │
-              │               │        DuckDB       │
-              ▼               │           │         │
-          Dispatcher          │           └────┬────┘
-              │               │                │
-              ▼               │                ▼
-       Validated Tools        │         Hybrid Synthesis
-              │               │                │
-              ▼               │                │
-           DuckDB             │                │
-              └───────────────┴────────────────┘
-                              │
-                              ▼
-                           Qwen3:8B
-                              │
-                              ▼
-                    Grounded Analyst Answer
-                              │
-                              ▼
-                          Streamlit
+                         User / API Client
+                                │
+                                ▼
+                             FastAPI
+                                │
+                         Pydantic Validation
+                                │
+                                ▼
+                       Claims Intelligence Agent
+                                │
+                                ▼
+                        LangGraph Planner
+                                │
+                ┌───────────────┼───────────────┐
+                │               │               │
+                ▼               ▼               ▼
+            Analytics        Knowledge        Hybrid
+                │               │               │
+                ▼               ▼          ┌────┴────┐
+           LLM Router          FAISS        ▼         ▼
+                │               │       Analytics    RAG
+                ▼               │           │         │
+        Canonical ToolRoute     │           ▼         │
+                │               │        DuckDB       │
+                ▼               │           │         │
+            Dispatcher          │           └────┬────┘
+                │               │                │
+                ▼               │                ▼
+         Validated Tools        │         Hybrid Synthesis
+                │               │                │
+                ▼               │                │
+             DuckDB             │                │
+                └───────────────┴────────────────┘
+                                │
+                                ▼
+                          LLM Synthesis
+                                │
+                                ▼
+                      Grounded API Response
 ```
+
+---
+
+## AI Engineering Architecture
+
+The application supports different inference environments without changing the agent implementation.
+
+```text
+                    get_llm()
+                       │
+                 LLM_PROVIDER
+                 ┌─────┴─────┐
+                 │           │
+                 ▼           ▼
+              Ollama        Groq
+                 │           │
+             qwen3:8b   Hosted Qwen
+                 │           │
+                 ▼           ▼
+          Local Development   Cloud Deployment
+```
+
+Configuration is supplied through environment variables rather than hard-coded deployment assumptions.
+
+Example local configuration:
+
+```text
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen3:8b
+```
+
+Cloud configuration:
+
+```text
+LLM_PROVIDER=groq
+GROQ_MODEL=qwen/qwen3.8-27b
+GROQ_API_KEY=<secret>
+```
+
+Secrets are never committed to source control.
+
+---
+
+## API Layer
+
+FastAPI exposes the agent through a programmatic service interface.
+
+### Health Check
+
+```http
+GET /health
+```
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+This endpoint is used both by the hosting platform and by automated container smoke tests.
+
+### Claims Query
+
+```http
+POST /query
+```
+
+Example request:
+
+```json
+{
+  "question": "Describe the pharmacy-intensive chronic population."
+}
+```
+
+The API:
+
+1. validates the request with Pydantic
+2. invokes the Claims Intelligence Agent
+3. executes validated analytical or retrieval tools
+4. synthesizes the grounded response
+5. returns a controlled response contract
+
+The API intentionally does not expose the internal LangGraph state directly.
+
+This separates the public application interface from the implementation details of the agent.
 
 ---
 
@@ -108,9 +214,9 @@ The objective of this second project is different:
 
 ### 1. Deterministic Analytics
 
-Numerical healthcare analytics are calculated by DuckDB-backed Python tools.
+Numerical healthcare analytics are calculated by tested DuckDB-backed Python tools.
 
-The language model does not calculate:
+The LLM does not calculate:
 
 - utilization rates
 - cost concentration
@@ -118,68 +224,112 @@ The language model does not calculate:
 - chronic-condition prevalence
 - population statistics
 
-Instead, the model selects an appropriate validated analytical capability.
+Instead, it identifies the required analytical capability and passes validated arguments to deterministic tools.
 
 ---
 
 ### 2. Controlled Tool Use
 
-The analytical layer exposes a limited set of tested capabilities:
+The analytical layer exposes a constrained set of capabilities.
 
 #### Population Analytics
 
-`get_population_summary()`
+```python
+get_population_summary()
+```
 
-Returns high-level member-year statistics including population size, annual cost measures, and utilization prevalence.
+Returns population size, annual cost measures, and healthcare utilization statistics.
 
 #### Segment Profiling
 
-`get_segment_profile(segment)`
+```python
+get_segment_profile(segment)
+```
 
-Returns utilization, cost, and clinical characteristics for one validated member segment.
+Returns utilization, cost, and clinical characteristics for one canonical member segment.
 
 #### Segment Comparison
 
-`compare_segments(segment_a, segment_b)`
+```python
+compare_segments(segment_a, segment_b)
+```
 
-Compares two member segments across canonical utilization, cost, and chronic-condition measures.
+Compares two segments across shared cost, utilization, and chronic-condition measures.
 
 #### Cost Concentration
 
-`get_cost_concentration(top_fraction)`
+```python
+get_cost_concentration(top_fraction)
+```
 
-Measures the proportion of positive healthcare spending attributable to selected highest-cost portions of the beneficiary-year population.
+Measures the proportion of positive healthcare spending attributable to selected highest-cost portions of the population.
 
 #### Chronic-Condition Prevalence
 
-`get_condition_prevalence(segment)`
+```python
+get_condition_prevalence(segment)
+```
 
-Returns ranked chronic-condition prevalence within a validated member segment.
+Returns ranked chronic-condition prevalence for a validated segment.
 
-All analytical tools operate against a shared DuckDB semantic layer.
+---
+
+### 3. Stable API Contracts
+
+FastAPI and Pydantic establish a boundary between external API consumers and the internal AI system.
+
+```text
+HTTP JSON
+    ↓
+QueryRequest
+    ↓
+Agent Internals
+    ↓
+QueryResponse
+    ↓
+HTTP JSON
+```
+
+Internal routing state, DuckDB results, and orchestration structures can evolve without requiring the public API contract to change.
+
+---
+
+### 4. Externalized Configuration
+
+Infrastructure-specific configuration is provided through environment variables.
+
+The code does not assume:
+
+- a specific LLM provider
+- a specific Ollama host
+- a particular deployment machine
+- locally stored secrets
+
+This allows the same application to operate with local Ollama inference during development and hosted Groq inference after deployment.
 
 ---
 
 ## DuckDB Semantic Layer
 
-The application reads the processed Medicare analytical data directly from Parquet.
+The application reads validated analytical data directly from Parquet.
 
 ```text
 member_year.parquet
         │
-        ├───────────────┐
-        │               │
-        ▼               ▼
-member_year        high_cost_persistence
-        │               │
-        └───────┬───────┘
-                ▼
-      analytical_member_year
+        ├─────────────────┐
+        │                 │
+        ▼                 ▼
+  Member-Year Data   High-Cost Persistence
+        │                 │
+        └────────┬────────┘
+                 ▼
+       analytical_member_year
+                 │
+                 ▼
+          Analytical Tools
 ```
 
-The semantic layer defines canonical derived measures once so individual tools do not independently recreate business logic.
-
-Examples include:
+The semantic layer defines shared business logic once so individual tools do not independently recreate analytical definitions.
 
 ### Composite Annual Cost
 
@@ -204,7 +354,7 @@ has_inpatient_utilization =
 
 ### Member Segmentation
 
-The semantic layer deterministically reproduces six mutually exclusive analytical segments originally developed in the CMS Medicare Utilization Analytics project:
+Six mutually exclusive analytical segments are generated deterministically:
 
 1. Persistent high-cost complex
 2. Recurrent high-cost complex
@@ -213,41 +363,7 @@ The semantic layer deterministically reproduces six mutually exclusive analytica
 5. High routine utilization
 6. Stable / lower utilization
 
----
-
-## Local Language Model
-
-The project uses:
-
-```text
-Qwen3:8B
-```
-
-running locally through:
-
-```text
-Ollama
-```
-
-with the LangChain Ollama integration.
-
-Example configuration:
-
-```python
-llm = ChatOllama(
-    model="qwen3:8b",
-    temperature=0.2,
-)
-```
-
-The local model is responsible for:
-
-- question interpretation
-- analytical tool selection
-- hybrid-question planning
-- answer synthesis
-
-It is not responsible for numerical healthcare calculations.
+The segmentation combines utilization patterns, chronic-condition burden, longitudinal high-cost persistence, and population-relative percentile thresholds.
 
 ---
 
@@ -255,16 +371,16 @@ It is not responsible for numerical healthcare calculations.
 
 Structured claims analytics and methodological knowledge are intentionally separated.
 
-RAG is used for questions such as:
+RAG handles questions such as:
 
 - How is total annual cost calculated?
 - What does MEDREIMB_IP mean?
-- How is Persistent High-Cost Complex defined?
-- How was the member-year analytical dataset constructed?
+- How is persistent high-cost complex defined?
+- How was the member-year dataset constructed?
 - What are the limitations of DE-SynPUF?
-- Can findings from this project be generalized to actual Medicare populations?
+- Can findings be generalized to actual Medicare beneficiaries?
 
-The initial knowledge corpus includes:
+The knowledge corpus includes:
 
 ```text
 knowledge/
@@ -274,37 +390,41 @@ knowledge/
 └── metric_definitions.md
 ```
 
-Markdown documents are divided into heading-based semantic chunks.
-
-Embeddings are generated locally using Sentence Transformers and indexed using FAISS.
+The retrieval pipeline is:
 
 ```text
 Knowledge Documents
         ↓
 Semantic Chunking
         ↓
-Sentence Transformer
+Sentence Transformers
         ↓
 Vector Embeddings
         ↓
 FAISS
         ↓
-Relevant Knowledge Passages
+Relevant Passages
         ↓
-Qwen Synthesis
+LLM Synthesis
 ```
 
-Retrieved results retain document-level provenance so the application can display supporting knowledge sources.
+Retrieved passages retain source provenance.
+
+### Resource-Aware Loading
+
+Sentence Transformers is imported lazily rather than during application startup.
+
+This reduces baseline memory consumption and prevents the embedding stack, including Transformers and PyTorch dependencies, from being initialized when the application only needs lightweight endpoints such as `/health`.
+
+This became particularly important when deploying the service into a memory-constrained container environment.
 
 ---
 
-## LangGraph Agent Workflow
+## LangGraph Workflow
 
-LangGraph coordinates three analytical modes.
+LangGraph coordinates three execution modes.
 
 ### Analytics Mode
-
-Used when the question requires numerical evidence.
 
 ```text
 Question
@@ -313,7 +433,7 @@ Planner
    ↓
 Analytics
    ↓
-Qwen Tool Router
+LLM Tool Router
    ↓
 Canonical ToolRoute
    ↓
@@ -323,14 +443,10 @@ DuckDB
    ↓
 Validated Result
    ↓
-Qwen Synthesis
+LLM Synthesis
 ```
 
----
-
 ### Knowledge Mode
-
-Used for methodology, definitions, provenance, and limitations.
 
 ```text
 Question
@@ -343,35 +459,31 @@ FAISS Retrieval
    ↓
 Relevant Documentation
    ↓
-Qwen Synthesis
+LLM Synthesis
 ```
-
----
 
 ### Hybrid Mode
 
-Used when a question requires both analytical results and methodological context.
+Hybrid questions require both analytical evidence and methodological context.
 
 Example:
 
 > Compare persistent high-cost complex members with pharmacy-intensive chronic members, explain how each cohort is defined, and summarize the main utilization differences.
 
-The graph decomposes the request into:
-
 ```text
                     Question
                        │
-                     Planner
+                    Planner
                        │
               ┌────────┴────────┐
               ▼                 ▼
        Analytical Need     Knowledge Need
               │                 │
               ▼                 ▼
-       compare_segments      FAISS RAG
+       compare_segments       FAISS RAG
               │                 │
               ▼                 ▼
-            DuckDB        Cohort Definitions
+            DuckDB       Cohort Definitions
               │                 │
               └────────┬────────┘
                        ▼
@@ -381,30 +493,28 @@ The graph decomposes the request into:
                 Grounded Answer
 ```
 
-This hybrid workflow represents the primary agentic capability of the project.
-
 ---
 
 ## Controlled Routing
 
-The application combines deterministic routing rules with local-LLM routing.
+The application combines deterministic routing logic with LLM-assisted routing.
 
-High-confidence intents such as explicit requests for:
+High-confidence intents can bypass probabilistic model selection.
+
+Examples include:
 
 - metric definitions
 - methodology
 - limitations
-- population generalization
+- population-generalization questions
 
-can be routed directly to the knowledge retriever.
+Analytical requests are routed to validated tools.
 
-Clear analytical requests are routed to validated analytical tools.
+More ambiguous analyst questions can be resolved using structured Pydantic outputs from the configured LLM.
 
-Ambiguous analyst questions are resolved by Qwen using structured Pydantic output.
+Model-generated segment names are normalized against a canonical controlled vocabulary before execution.
 
-Model-generated segment names are normalized to a canonical controlled vocabulary before tool execution.
-
-This prevents small differences such as:
+For example:
 
 ```text
 Acute episodic high-cost
@@ -416,77 +526,248 @@ and:
 Acute episodic high cost
 ```
 
-from breaking analytical execution.
+can resolve to the same approved analytical segment.
 
 ---
 
-## Validation and Testing
+## Testing Strategy
 
-A major focus of the project is preventing probabilistic model behavior from changing deterministic analytical results.
+The test suite is intentionally separated by infrastructure dependency.
 
-The test suite covers:
+### Portable Tests
 
-### Analytical Validation
+Portable tests require neither local analytical data nor a live LLM service.
 
-Known results from the CMS Medicare Utilization Analytics project are used as regression targets.
+They cover:
 
-Examples include:
+- Pydantic models
+- validation
+- canonicalization
+- isolated routing logic
+- API contracts
+- mocked Claims Agent behavior
+- API error handling
+- LLM-provider configuration
 
-- total beneficiary-year population
-- healthcare utilization prevalence
-- member-segment profiles
-- healthcare spending concentration
-- chronic-condition prevalence structure
-
-### Input Validation
-
-Pydantic and Enum-based models constrain:
-
-- analytical tool names
-- member segment names
-- cost-concentration inputs
-- router outputs
-
-### Routing Evaluation
-
-Natural-language analyst questions are evaluated against expected tool selections and arguments.
-
-### Canonicalization Testing
-
-Model-generated variations of member-segment names are mapped to approved analytical values.
-
-### RAG Testing
-
-Retrieval tests verify that questions about:
-
-- metric definitions
-- cohort definitions
-- methodology
-- analytical limitations
-
-surface the appropriate knowledge documents.
-
-Tests are separated into deterministic and local-model suites.
+Run with:
 
 ```powershell
-python -m pytest -m "not llm" -v
+pytest -m "not llm and not data" -v
 ```
 
-runs deterministic tests.
+These tests form the primary automated CI gate.
+
+---
+
+### Data Integration Tests
+
+Data tests execute against the validated processed DE-SynPUF analytical artifacts.
+
+They cover:
+
+- population statistics
+- cost concentration
+- segment profiles
+- condition prevalence
+- analytical dispatch
+- DuckDB semantic-layer behavior
+
+Run with:
 
 ```powershell
-python -m pytest -m "llm" -v
+pytest -m data -v
 ```
 
-evaluates local-model routing behavior.
+Known results from the upstream CMS Medicare Utilization Analytics project provide regression targets.
+
+---
+
+### LLM Integration Tests
+
+LLM-marked tests exercise model-dependent behavior using a live configured provider.
+
+They evaluate areas such as:
+
+- natural-language routing
+- ambiguous intent resolution
+- model-generated analytical arguments
+
+Run with:
+
+```powershell
+pytest -m llm -v
+```
+
+Keeping these tests separate prevents model latency or inference availability from making portable CI unstable.
+
+---
+
+## API Testing and Mocking
+
+FastAPI endpoint tests use `TestClient`.
+
+The Claims Agent is mocked where appropriate so API tests can verify:
+
+- HTTP status codes
+- request validation
+- response schemas
+- agent invocation
+- failure behavior
+
+without invoking an actual LLM on every test.
+
+This establishes a separation between:
+
+```text
+API contract testing
+```
+
+and:
+
+```text
+AI integration testing
+```
+
+Internal exceptions are logged server-side while callers receive controlled HTTP error responses.
+
+---
+
+## Containerization
+
+The API is packaged as a Docker image.
+
+The container:
+
+1. starts from a slim Python base
+2. installs pinned runtime dependencies
+3. copies application code and required synthetic analytical artifacts
+4. starts Uvicorn
+5. exposes the FastAPI service
+
+The containerized application binds on:
+
+```text
+0.0.0.0
+```
+
+so it can receive traffic from the host/container runtime.
+
+The project also uses `.dockerignore` to keep unnecessary development artifacts out of the Docker build context.
+
+---
+
+## CI/CD Pipeline
+
+GitHub Actions implements automated continuous integration and gated deployment.
+
+```text
+                       Push to main
+                            │
+                            ▼
+                     GitHub Actions
+                            │
+                            ▼
+                    Portable pytest
+                            │
+                          PASS
+                            │
+                            ▼
+                    Build Docker Image
+                            │
+                          PASS
+                            │
+                            ▼
+                    Start Container
+                            │
+                            ▼
+                       GET /health
+                            │
+                          200 OK
+                            │
+                            ▼
+                      CI Successful
+                            │
+                            ▼
+                     deploy.yml
+                            │
+                            ▼
+                  Render Deploy Hook
+                            │
+                            ▼
+                     Render Deployment
+                            │
+                            ▼
+                     FastAPI Service
+```
+
+A failed CI workflow prevents the deployment workflow from triggering.
+
+Deployment occurs only after the application:
+
+- passes the portable test suite
+- builds successfully as a Docker image
+- starts successfully as a container
+- responds successfully to the `/health` smoke test
+
+Render's direct Auto-Deploy behavior is disabled so GitHub Actions remains the deployment gate.
+
+---
+
+## Cloud Deployment
+
+The application is deployed as a Dockerized Web Service on Render.
+
+The hosted environment uses:
+
+```text
+LLM_PROVIDER=groq
+```
+
+with the Groq API credential supplied as a deployment secret.
+
+Local development retains:
+
+```text
+LLM_PROVIDER=ollama
+```
+
+This means cloud deployment does not require changing application logic.
+
+The deployment surfaced and resolved several practical engineering constraints, including:
+
+- Linux-versus-local environment differences
+- application/data artifact separation
+- secret management
+- memory-constrained container startup
+- lazy loading of ML dependencies
+- health-check design
+- external LLM configuration
+- CI-gated deployment
+
+---
+
+## Local Development vs. Cloud Deployment
+
+| Capability | Local | Cloud |
+|---|---|---|
+| API | FastAPI | FastAPI |
+| Analytics | DuckDB | DuckDB |
+| Data | Synthetic DE-SynPUF Parquet | Synthetic DE-SynPUF Parquet |
+| Orchestration | LangGraph | LangGraph |
+| LLM | Ollama / Qwen3:8B | Groq / Qwen |
+| RAG | FAISS + Sentence Transformers | FAISS + Sentence Transformers |
+| UI | Streamlit | FastAPI `/docs` |
+| Container | Optional | Docker |
+| CI | GitHub Actions | GitHub Actions |
+| CD | N/A | GitHub Actions → Render |
 
 ---
 
 ## Streamlit Interface
 
-The application provides a lightweight analyst-facing interface.
+The repository also includes a lightweight local Streamlit interface for interactive analyst exploration.
 
-Users can ask questions such as:
+Example questions include:
 
 ### Population
 
@@ -508,16 +789,7 @@ Users can ask questions such as:
 
 > Compare persistent high-cost complex members with pharmacy-intensive chronic members, explain how each cohort is defined, and summarize the main utilization differences.
 
-Responses include:
-
-- grounded analyst-facing explanation
-- execution mode
-- analytical tool used
-- tool arguments
-- retrieved knowledge sources
-- synthetic-data disclaimer
-
-The execution trace makes the agent's reasoning path visible instead of presenting the application as a black-box chatbot.
+The local interface can expose additional execution metadata useful during development, including routing mode, selected tools, arguments, and retrieved knowledge sources.
 
 ---
 
@@ -525,6 +797,11 @@ The execution trace makes the agent's reasoning path visible instead of presenti
 
 ```text
 medicare-claims-intelligence-agent/
+│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── deploy.yml
 │
 ├── agents/
 │   ├── dispatcher.py
@@ -538,7 +815,6 @@ medicare-claims-intelligence-agent/
 │   └── workflow.py
 │
 ├── core/
-│   ├── config.py
 │   ├── llm.py
 │   └── models.py
 │
@@ -557,11 +833,6 @@ medicare-claims-intelligence-agent/
 │   ├── limitations.md
 │   └── metric_definitions.md
 │
-├── notebooks/
-│   ├── 01_duckdb_exploration.ipynb
-│   ├── 02_llm_routing.ipynb
-│   └── 03_rag_retrieval.ipynb
-│
 ├── prompts/
 │   ├── hybrid_synthesis.py
 │   ├── planner.py
@@ -573,12 +844,21 @@ medicare-claims-intelligence-agent/
 │   ├── embeddings.py
 │   └── retriever.py
 │
+├── src/
+│   └── api/
+│       ├── __init__.py
+│       ├── app.py
+│       └── schemas.py
+│
 ├── tests/
-│   ├── test_conditions.py
+│   ├── test_api.py
+│   ├── test_condition.py
 │   ├── test_costs.py
 │   ├── test_dispatcher.py
+│   ├── test_llm.py
+│   ├── test_models.py
 │   ├── test_population.py
-│   ├── test_router.py
+│   ├── test_routing.py
 │   └── test_segments.py
 │
 ├── tools/
@@ -591,13 +871,15 @@ medicare-claims-intelligence-agent/
 ├── ui/
 │   └── app.py
 │
+├── .dockerignore
 ├── .env.example
 ├── .gitignore
-├── pyproject.toml
+├── Dockerfile
+├── pytest.ini
+├── requirements.txt
+├── requirements-dev.txt
 └── README.md
 ```
-
-Adjust that tree to match the final files you actually have before publishing.
 
 ---
 
@@ -607,55 +889,139 @@ Adjust that tree to match the final files you actually have before publishing.
 
 - Python
 - DuckDB
-- pandas
-- PyArrow
 - Parquet
 - Pydantic
+- CMS DE-SynPUF-derived synthetic analytical data
 
 ### Agentic AI
 
-- Qwen3:8B
-- Ollama
-- LangChain Ollama
 - LangGraph
+- LangChain
+- Qwen
+- Ollama
+- Groq
 
 ### Retrieval-Augmented Generation
 
 - Sentence Transformers
 - FAISS
-- heading-aware Markdown chunking
+- semantic Markdown chunking
 
-### Application
+### API and Application
 
+- FastAPI
+- Uvicorn
 - Streamlit
+- OpenAPI / Swagger
+
+### Engineering and Delivery
+
+- Docker
+- GitHub Actions
+- CI/CD
+- Render
+- environment-based configuration
+- secrets management
+- health-check smoke testing
 
 ### Testing
 
 - pytest
+- FastAPI TestClient
+- mocking
 - deterministic regression testing
-- local-LLM routing evaluation
+- data integration testing
+- LLM integration testing
 
 ---
 
-## Data Source
+## Data and Reproducibility
 
-This project uses analytical outputs derived from the CMS Data Entrepreneurs' Synthetic Public Use File (DE-SynPUF).
+The project uses analytical artifacts derived from the **CMS Data Entrepreneurs' Synthetic Public Use File (DE-SynPUF)**.
 
-The upstream companion project performs the claims engineering and member-year construction:
+The upstream CMS Medicare Utilization Analytics project performs the claims engineering and construction of the beneficiary-year analytical layer.
 
-**CMS Medicare Utilization Analytics**
-
-The agent project intentionally consumes the validated analytical layer rather than rebuilding raw claims transformations.
-
-This separation mirrors a common analytical architecture:
+This repository intentionally consumes that validated layer rather than rebuilding the raw claims pipeline:
 
 ```text
-Claims Pipeline
-      ↓
+CMS Synthetic Claims
+        ↓
+Claims Engineering
+        ↓
 Validated Semantic Data Product
-      ↓
-Analytics / AI Consumption Layer
+        ↓
+Claims Intelligence Agent
 ```
+
+Two processed synthetic Parquet artifacts are included in this repository to make the deployed analytical service reproducible:
+
+```text
+data/processed/member_year.parquet
+data/processed/high_cost_persistence.parquet
+```
+
+These contain synthetic analytical data and are included specifically to support the portfolio deployment.
+
+---
+
+## Engineering Decisions
+
+### Why DuckDB?
+
+The analytical workload is structured, deterministic, and naturally operates over Parquet. DuckDB allows analytical tools to query the data directly without introducing a separate database server into the portfolio deployment.
+
+### Why Not LLM-Generated SQL?
+
+The application is designed around trusted analytical tools rather than arbitrary generated queries.
+
+This improves:
+
+- validation
+- reproducibility
+- testability
+- business-rule consistency
+- analytical traceability
+
+### Why Multiple LLM Providers?
+
+Local development and cloud deployment have different infrastructure constraints.
+
+Provider abstraction allows:
+
+```text
+Local → Ollama
+Cloud → Groq
+```
+
+while keeping orchestration, prompts, retrieval, and analytical logic unchanged.
+
+### Why Lazy-Load Sentence Transformers?
+
+The initial cloud deployment exceeded the memory available during application startup.
+
+Moving the Sentence Transformers import to the retrieval execution path allowed lightweight API endpoints to start without eagerly loading the full embedding and Transformer stack.
+
+This reduced startup memory requirements without removing RAG capability.
+
+### Why Separate Test Categories?
+
+Not every valid test has the same infrastructure requirements.
+
+The project distinguishes:
+
+- portable tests
+- analytical-data integration tests
+- LLM integration tests
+
+This keeps CI deterministic while preserving broader end-to-end validation locally.
+
+### Why CI-Gated Deployment?
+
+Render Auto-Deploy is intentionally disabled.
+
+GitHub Actions triggers the deployment only after tests, Docker image creation, container startup, and the health smoke test succeed.
+
+This prevents a failed CI build from automatically becoming the deployed application.
 
 ---
 
@@ -663,43 +1029,28 @@ Analytics / AI Consumption Layer
 
 This project is a portfolio demonstration using synthetic Medicare-style data.
 
-The application should not be interpreted as:
+It should not be interpreted as:
 
 - a clinical decision-support system
 - a validated care-management system
-- an actuarial Medicare cost model
+- an actuarial Medicare model
 - an eligibility or coverage engine
 - a utilization-management application
 
 DE-SynPUF does not represent actual Medicare beneficiaries.
 
-The member segments are transparent analytical constructs developed from patterns in the synthetic data and would require independent validation before application to another population.
+The analytical segments are transparent constructs developed from patterns in the synthetic dataset and would require independent validation before use with another population.
 
-The local language model can still make interpretation or routing errors. The architecture therefore separates numerical calculation from language-model reasoning and exposes analytical tools and retrieved knowledge sources for traceability.
+LLMs can still make interpretation, routing, or synthesis errors. The architecture therefore keeps numerical calculations outside the LLM and exposes controlled analytical capabilities.
 
----
-
-## Known Routing Limitation
-
-Some semantically ambiguous questions can reasonably map to either:
-
-- analytical cohort profiling, or
-- knowledge retrieval.
-
-For example:
-
-> What does the persistent high-cost complex cohort look like?
-
-may be interpreted as either a request for observed analytical characteristics or for a cohort description.
-
-The system uses deterministic routing rules for high-confidence intents and local-LLM routing for ambiguous requests. Remaining ambiguity is documented rather than resolved through increasingly brittle keyword rules.
+Free-tier cloud infrastructure also introduces operational limitations such as cold starts, resource constraints, and hosted-model rate limits.
 
 ---
 
 ## Project Objective
 
-This project demonstrates an approach to agentic healthcare analytics in which:
+The Medicare Claims Intelligence Agent demonstrates a practical approach to building AI systems around trusted analytics:
 
-**LLMs reason, deterministic tools calculate, RAG grounds methodology, and LangGraph orchestrates evidence.**
+> **LLMs reason. Deterministic tools calculate. RAG grounds methodology. LangGraph orchestrates evidence. APIs expose capabilities. Containers make them portable. CI/CD makes them deployable.**
 
-The emphasis is on combining modern local AI tooling with transparent, validated healthcare analytics rather than allowing a language model to become the source of truth for claims calculations.
+The project is intentionally designed not just as an AI demonstration, but as an **end-to-end AI engineering system** spanning analytical architecture, agent orchestration, API development, testing, containerization, configuration management, hosted inference, and automated deployment.
